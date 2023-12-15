@@ -47,24 +47,6 @@
       </tbody>
     </table>
 
-
-    <table>
-      <thead>
-        <tr>
-          <th>代数</th>
-          <th v-for="color in colors" :key="color">{{ color }}（前）</th>
-          <th v-for="color in colors" :key="color">{{ color }}（后）</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(generation, index) in generationsData" :key="index">
-          <td>{{ index + 1 }}</td>
-          <td v-for="count in generation.before">{{ count }}</td>
-          <td v-for="count in generation.after">{{ count }}</td>
-        </tr>
-      </tbody>
-    </table>
-
     <!-- 添加一个 div 用于渲染 ECharts 图表 -->
     <div ref="chart" style="width: 600px; height: 400px;"></div>
 
@@ -83,7 +65,7 @@ export default {
       shapes: [],
       counter: 0,
       colorCount: {},
-      threshold: 3,
+      threshold: 5,
       generations: [], // 用于记录每一代的 shapes
 
       shapeSize: 20, // 形状大小
@@ -91,13 +73,16 @@ export default {
       backgroundHeight: window.innerHeight * 0.6, // 背景高度
 
       generationsData: [], // 用于存储每一代的形状颜色统计数据
+      colorRange: [] // 存储不同颜色数量范围的数据
     };
   },
   mounted() {
     this.initChart();
     this.generateNonOverlappingShapes(10); // 初始化页面时生成不重叠的形状
+  },
 
-    this.updateChart(); // 更新图表
+  created() {
+    console.log(this.generationsData);
   },
 
   methods: {
@@ -124,7 +109,7 @@ export default {
         this.shapes.push(shape);
       }
     },
-
+    
     incrementCounter() {
       if(this.counter >= this.threshold - 1){
         this.counter = 0;
@@ -236,7 +221,6 @@ export default {
           data: [] // 初始数据为空
         }]
       });
-     
     },
     // 更新 ECharts 图表数据
     updateChart() {
@@ -255,7 +239,6 @@ export default {
           data // 更新数据
         }]
       });
-
     }
   },
   watch: {
