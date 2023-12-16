@@ -53,14 +53,16 @@
         <tr>
           <th>代数</th>
           <th v-for="color in colors" :key="color">{{ color }}（前）</th>
+          <br>
           <th v-for="color in colors" :key="color">{{ color }}（后）</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(generation, index) in generationsData" :key="index">
           <td>{{ index + 1 }}</td>
-          <td v-for="count in generation.before">{{ count }}</td>
-          <td v-for="count in generation.after">{{ count }}</td>
+          <td v-for="count in generation">{{ count }}</td>
+          <br>
+          <td v-for="(count, color) in generationAdjusted[index]" :key="color">{{ count }}</td>
         </tr>
       </tbody>
     </table>
@@ -100,6 +102,20 @@ export default {
     this.updateChart(); // 更新图表
   },
 
+  computed: {
+  generationAdjusted() {
+    return this.generationsData.map(generation => {
+      const adjustedGeneration = {};
+      for (const color in generation) {
+        adjustedGeneration[color] = generation[color] - (this.colorCount[color] || 0);
+      }
+      return adjustedGeneration;
+    });
+  }
+},
+
+
+
   methods: {
 
     generateShapes(quantity) {
@@ -128,6 +144,7 @@ export default {
     incrementCounter() {
       if(this.counter >= this.threshold - 1){
         this.counter = 0;
+        this.colorCount = this.getCurrentColorCounts();
         this.generateOffspring();
       }else{
         this.counter++;
@@ -139,13 +156,15 @@ export default {
       this.shapes.splice(index, 1);
 
       this.incrementCounter();
-      if (!this.colorCount[deletedColor]) {
-        this.colorCount[deletedColor] = 0; // 直接赋值
-      }
-        this.colorCount[deletedColor]--;
+      // if (!this.colorCount[deletedColor]) {
+      //   this.colorCount[deletedColor] = 0; // 直接赋值
+      // }
+      //   this.colorCount[deletedColor]--;
       },
 
+    
 
+      
     // 确保新位置不重叠的函数
     getNonOverlappingPosition(existingPositions) {
       let newTop, newLeft;
@@ -178,7 +197,34 @@ export default {
       }
 
       this.shapes = offspring;
-      this.generations.push(JSON.parse(JSON.stringify(this.shapes)));
+      this.generationsData.push(this.calculateColorCount()); // 将当前代的形状颜色统计数据存储到 generationsData 数组中
+    },
+
+    calculateColorCount() {
+      const colorCount = new Array(this.colors.length).fill(0);
+
+      this.shapes.forEach(shape => {
+        const colorIndex = this.colors.indexOf(shape.color);
+        if (colorIndex !== -1) {
+          colorCount[colorIndex]++;
+        }
+      });
+
+      return colorCount;
+    },
+
+    getCurrentColorCounts() {
+      const colorCounts = {};
+
+      this.shapes.forEach(shape => {
+        const color = shape.color;
+        if (!colorCounts[color]) {
+          colorCounts[color] = 0;
+        }
+        colorCounts[color]++;
+      });
+
+      return colorCounts;
     },
 
     generateOffspring() {
@@ -205,6 +251,11 @@ export default {
 
       this.shapes = [...this.shapes, ...offspring];
       this.generations.push(JSON.parse(JSON.stringify(this.shapes)));
+
+      this.generationsData.push(this.calculateColorCount()); // 存储新一代的形状颜色统计数据
+
+      // 在生成后代后更新图表数据
+      this.updateChart();
     },
 
 
@@ -213,6 +264,7 @@ export default {
       this.counter = 0;
       this.colorCount = {};
       this.generations = [];
+      this.generationsData = [];
       this.generateNonOverlappingShapes(10); // 初始生成不重叠的形状
     },
 
@@ -241,18 +293,11 @@ export default {
     // 更新 ECharts 图表数据
     updateChart() {
       const data = [];
-      const lastGeneration = this.generations[this.generations.length - 1]; // 获取最后一代的数据
-
-      if (lastGeneration) {
-        this.colors.forEach(color => {
-          const count = lastGeneration.filter(shape => shape.color === color).length; // 统计每种颜色的数量
-          data.push(count);
-        });
-      }
+      const lastGenerationData = this.generationsData[this.generationsData.length - 1];
 
       this.chart.setOption({
         series: [{
-          data // 更新数据
+          data: lastGenerationData  // 更新数据
         }]
       });
 
