@@ -98,7 +98,7 @@ export default {
       initialQuantity: 60,
       shapeSize: 40, // 形状大小
       backgroundWidth: window.innerWidth * 0.85, // 背景宽度
-      backgroundHeight: window.innerHeight * 0.9, // 背景高度
+      backgroundHeight: window.innerHeight * 0.85, // 背景高度
 
       generationsData: [], // 用于存储每一代的形状颜色统计数据
     };
