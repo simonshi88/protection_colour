@@ -142,6 +142,22 @@ export default {
       const deletedColor = this.shapes[index].color;
       this.shapes.splice(index, 1);
 
+      const existingPositions = this.shapes.map(shape => ({
+        top: shape.top,
+        left: shape.left,
+        bottom: shape.top + this.shapeSize,
+        right: shape.left + this.shapeSize
+      }));
+
+      this.shapes.forEach(shape => {
+
+          const { top, left } = this.getNonOverlappingPosition(existingPositions);
+          existingPositions.push({ top, left, bottom: top + this.shapeSize, right: left + this.shapeSize});
+          shape.top = top;
+          shape.left = left;
+        
+      });
+
       this.incrementCounter();
       // if (!this.colorCount[deletedColor]) {
       //   this.colorCount[deletedColor] = 0; // 直接赋值
