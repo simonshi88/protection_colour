@@ -1,18 +1,19 @@
 <template>
   <div>
     <p>
-      Quantity Threshold: 
+      捕食多少次后生成下一代: 
       <input type="number" v-model="threshold" />
-      <button @click="generateOffspring">Generate Offspring</button>
+      <button @click="echarts.generateOffspring">直接生成后代</button>
     </p>
-
     <p>
-      <button @click="clearAll">Clear All</button>
+      初始数量: 
+      <input v-model="initialQuantity"> 
+      <button @click="clearAll">初始确认</button>
     </p>
-
+    <p>已捕食次数（达到下一代时清零）: {{ counter }}</p>
     <div class="container">
       <div class="background" :style="{ width: backgroundWidth + 'px', height: backgroundHeight + 'px',
-       backgroundColor: backgroundColor }" >
+       backgroundColor: backgroundColor}" >
         <div
           v-for="(shape, index) in shapes"
           :key="shape.id"
@@ -29,10 +30,36 @@
         ></div>
       </div>
     </div>
+    
+    <br>
+    <div style="display: flex; justify-content: left;">
+      <div ref="chart" style="width: 600px; height: 400px;"></div>
+      
+    </div>
+    <!-- 添加一个 div 用于渲染 ECharts 图表 -->
+    <div style="display: flex; justify-content: left;">
+      <table >
+      <thead>
+        <tr>
+          <th>代数 </th>
+          <th v-for="color in colorsName" :key="color">{{ color }} </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(generation, index) in generationsData" :key="index">
+          <td>{{ index + 1 }}</td>
+          <td v-for="count in generation">{{ count }}</td>
+          <br>
+          <!-- 
+            <td v-for="(count, color) in generationAdjusted[index]" :key="color">{{ count }}</td>
+          -->
+        </tr>
+      </tbody>
+    </table>
+    </div>
 
 
-    <p>Click Count: {{ counter }}</p>
-    <table>
+    <!-- <table>
       <thead>
         <tr>
           <th>颜色</th>
@@ -45,59 +72,40 @@
           <td>{{ count }}</td>
         </tr>
       </tbody>
-    </table>
+    </table> -->
 
-
-    <table>
-      <thead>
-        <tr>
-          <th>代数</th>
-          <th v-for="color in colors" :key="color">{{ color }}（前）</th>
-          <br>
-          <th v-for="color in colors" :key="color">{{ color }}（后）</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(generation, index) in generationsData" :key="index">
-          <td>{{ index + 1 }}</td>
-          <td v-for="count in generation">{{ count }}</td>
-          <br>
-          <td v-for="(count, color) in generationAdjusted[index]" :key="color">{{ count }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- 添加一个 div 用于渲染 ECharts 图表 -->
-    <div ref="chart" style="width: 600px; height: 400px;"></div>
 
   </div>
+
 </template>
 
 <script>
 import * as echarts from 'echarts';
+import { Photoshop } from 'vue-color'//有6中风格，用哪种直接引用对应的名字就行
 
 export default {
   data() {
     return {
-      colors: ['red', 'blue', 'green', 'yellow', 'purple','black'],
+      colors: ['#dc6c0dff', '#0d74dcff', '#3CA73C', '#dcdc0dff'],
+      colorsName: ['橙色', '蓝色', '绿色', '黄色'],
       currentColor: '',
-      backgroundColor: 'grey', // 添加一个用于存储背景颜色的变量
+      backgroundColor: '#279527ff',// 添加一个用于存储背景颜色的变量
       shapes: [],
       counter: 0,
       colorCount: {},
-      threshold: 3,
+      threshold: 45,
       generations: [], // 用于记录每一代的 shapes
-
-      shapeSize: 20, // 形状大小
-      backgroundWidth: window.innerWidth * 0.9, // 背景宽度
-      backgroundHeight: window.innerHeight * 0.6, // 背景高度
+      initialQuantity: 60,
+      shapeSize: 40, // 形状大小
+      backgroundWidth: window.innerWidth * 0.85, // 背景宽度
+      backgroundHeight: window.innerHeight * 0.9, // 背景高度
 
       generationsData: [], // 用于存储每一代的形状颜色统计数据
     };
   },
   mounted() {
     this.initChart();
-    this.generateNonOverlappingShapes(10); // 初始化页面时生成不重叠的形状
+    this.generateNonOverlappingShapes(this.initialQuantity); // 初始化页面时生成不重叠的形状
 
     this.updateChart(); // 更新图表
   },
@@ -114,32 +122,11 @@ export default {
   }
 },
 
-
+  components: {
+    'photoshop-picker': Photoshop
+  },
 
   methods: {
-
-    generateShapes(quantity) {
-      const screenWidth = backgroundWidth;
-      const screenHeight = backgroundHeight;
-
-      for (let i = 0; i < quantity; i++) {
-        const shape = {
-          id: i,
-          color: this.colors[Math.floor(Math.random() * this.colors.length)],
-          top: Math.random() * screenHeight,
-          left: Math.random() * screenWidth
-        };
-
-        if (shape.top > screenHeight - this.shapeSize) {
-          shape.top -= this.shapeSize;
-        }
-        if (shape.left > screenWidth - this.shapeSize) {
-          shape.left -= this.shapeSize;
-        }
-
-        this.shapes.push(shape);
-      }
-    },
 
     incrementCounter() {
       if(this.counter >= this.threshold - 1){
@@ -185,12 +172,17 @@ export default {
       const offspring = [];
       const existingPositions = [];
 
+      const colorsPerType = Math.floor(quantity / this.colors.length);
+
       for (let i = 0; i < quantity; i++) {
+        const colorIndex = Math.floor(i / colorsPerType);
+        const color = this.colors[colorIndex];
+
         const { top, left } = this.getNonOverlappingPosition(existingPositions);
         existingPositions.push({ top, left, bottom: top + this.shapeSize, right: left + this.shapeSize });
         offspring.push({
           id: i + 1,
-          color: this.colors[Math.floor(Math.random() * this.colors.length)],
+          color: color,
           top,
           left
         });
@@ -265,7 +257,7 @@ export default {
       this.colorCount = {};
       this.generations = [];
       this.generationsData = [];
-      this.generateNonOverlappingShapes(10); // 初始生成不重叠的形状
+      this.generateNonOverlappingShapes(this.initialQuantity); // 初始生成不重叠的形状
     },
 
     // 初始化 ECharts 图表
@@ -277,7 +269,7 @@ export default {
         },
         xAxis: {
           type: 'category',
-          data: this.colors // x 轴使用颜色作为类目
+          data: this.colorsName// x 轴使用颜色作为类目
         },
         yAxis: {
           type: 'value'
@@ -319,7 +311,7 @@ export default {
 <style>
 .container {
   width: 100%;
-  height: 50%;
+  height: 60%;
   display: flex;
   justify-content: center;
   align-items: left;
@@ -339,8 +331,14 @@ export default {
   position: absolute;
   width: 30px;
   height: 30px;
-  border: 1px solid transparent;
-  border-radius: 3px;
+  border: 1px;
+  border-radius: 10px;
 }
+
+body{
+              margin: 0;
+              padding: 0;
+          }
+
 </style>
 
